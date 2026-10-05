@@ -26,10 +26,10 @@ export const Footer = () => {
             <path d="M15 3c.35 2.65 2.1 4.5 5 4.8" />
           </svg>
         </a>
-        <a className="site-contact" href="tel:0359701325" aria-label="Gọi Zalo 0359701325">
+        <span className="site-contact" aria-label="Zalo 0359701325">
           <Phone size={17} aria-hidden="true" />
           <span>Zalo: 0359 701 325</span>
-        </a>
+        </span>
         <span className="site-contact site-contact--address">
           <MapPin size={17} aria-hidden="true" />
           <span>Minh Khai, Hai Bà Trưng, Hà Nội</span>
