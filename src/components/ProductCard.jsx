@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Image as ImageIcon, ShoppingCart, Layers } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { flyToCart } from "../utils/flyToCart";
@@ -6,6 +6,26 @@ import { flyToCart } from "../utils/flyToCart";
 export const ProductCard = ({ product, onSelectProduct, rank }) => {
   const { addToCart } = useCart();
   const imageRef = useRef(null);
+  const [imageIndex, setImageIndex] = useState(0);
+  const productImages = useMemo(
+    () =>
+      [...new Set(
+        [product.imgUrl, ...(product.images || []), ...(product.variants || []).map((variant) => variant.imgUrl)]
+          .filter((image) => typeof image === "string" && image && !image.startsWith("blob:"))
+      )],
+    [product.imgUrl, product.images, product.variants]
+  );
+  const displayedImageIndex = productImages.length ? imageIndex % productImages.length : 0;
+  const currentImage = productImages[displayedImageIndex] || "";
+
+  useEffect(() => {
+    if (productImages.length <= 1) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setImageIndex((currentIndex) => (currentIndex + 1) % productImages.length);
+    }, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [product.id, productImages]);
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -15,13 +35,13 @@ export const ProductCard = ({ product, onSelectProduct, rank }) => {
     e.stopPropagation();
     const defaultVariant = product.variants?.[0];
     if (defaultVariant) {
-      flyToCart(imageRef.current, product.imgUrl);
+      flyToCart(imageRef.current, currentImage);
       const variantMeta = {
         price: defaultVariant.price ?? product.price,
         productName: product.name,
         size: defaultVariant.size,
         color: defaultVariant.color,
-        imgUrl: product.imgUrl || "",
+        imgUrl: currentImage,
       };
       addToCart(defaultVariant.id, 1, variantMeta);
     } else {
@@ -39,13 +59,14 @@ export const ProductCard = ({ product, onSelectProduct, rank }) => {
     >
       {/* Compact Product Image */}
       <div className="catalog-product-image relative overflow-hidden" style={{ aspectRatio: "4/5" }}>
-        {product.imgUrl || product.images?.[0] ? (
+        {currentImage ? (
           <img
+            key={currentImage}
             ref={imageRef}
-            src={product.imgUrl || product.images[0]}
-            alt={product.name}
+            src={currentImage}
+            alt={`${product.name}${productImages.length > 1 ? ` - ảnh ${displayedImageIndex + 1}` : ""}`}
             loading="lazy"
-            className="catalog-product-card__image w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+            className={`catalog-product-card__image w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500${productImages.length > 1 ? " is-changing" : ""}`}
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-500">
