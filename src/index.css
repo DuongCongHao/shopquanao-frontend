@@ -757,6 +757,49 @@ input, select, textarea { font-family: inherit; outline: none; border: none; }
   background: #2865a5;
 }
 
+.seller-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.seller-refresh-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #cbd8e8;
+  border-radius: 6px;
+  background: #fff;
+  color: #194a82;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.seller-refresh-button:hover:not(:disabled) {
+  border-color: #9db5d0;
+  background: #edf4fc;
+}
+
+.seller-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.seller-refresh-button .is-spinning {
+  animation: seller-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes seller-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
 .admin-modal-tabs button {
   color: #40546c;
 }

@@ -10,6 +10,7 @@ import {
   Loader2,
   PackagePlus,
   Plus,
+  RefreshCw,
   Save,
   Trash2,
   X,
@@ -37,6 +38,49 @@ const formatCurrency = (value) =>
     style: "currency",
     currency: "VND",
   }).format(value || 0);
+
+const formatOrderDate = (epoch, dateTime) => {
+  const parsedEpoch = Number(epoch);
+  const date = Number.isFinite(parsedEpoch) && parsedEpoch > 0
+    ? new Date(parsedEpoch)
+    : dateTime
+      ? new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(dateTime) ? dateTime : `${dateTime}Z`)
+      : null;
+
+  if (!date || Number.isNaN(date.getTime())) return "Không rõ thời gian";
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    dateStyle: "short",
+    timeStyle: "medium",
+  }).format(date);
+};
+
+const getOrderAutoDeleteAt = (order) => {
+  const deadline = Number(order.autoDeleteAt);
+  if (Number.isFinite(deadline) && deadline > 0) return deadline;
+
+  const fallbackTimestamp = [
+    Number(order.statusChangedAtEpoch),
+    Number(order.updatedAtEpoch),
+    Number(order.createdAtEpoch),
+  ].find((timestamp) => Number.isFinite(timestamp) && timestamp > 0);
+
+  if (fallbackTimestamp) {
+    return fallbackTimestamp + 7 * 24 * 60 * 60 * 1000;
+  }
+
+  const fallbackDate = order.updatedAt || order.createdAt;
+  if (!fallbackDate) return null;
+  const date = new Date(
+    /[zZ]|[+-]\d{2}:\d{2}$/.test(fallbackDate)
+      ? fallbackDate
+      : `${fallbackDate}Z`
+  );
+  return Number.isNaN(date.getTime())
+    ? null
+    : date.getTime() + 7 * 24 * 60 * 60 * 1000;
+};
 
 const xmlEscape = (value) => {
   const validXmlCharacters = Array.from(String(value ?? ""))
@@ -86,9 +130,7 @@ const orderToExcelRow = (order) => {
     order.customerEmail,
     order.customerAddress,
     statusLabel,
-    order.createdAt
-      ? new Date(order.createdAt).toLocaleString("vi-VN")
-      : "",
+    formatOrderDate(order.createdAtEpoch, order.createdAt),
     order.totalItems ??
       (order.items || []).reduce(
         (sum, item) => sum + Number(item.quantity || 0),
@@ -196,6 +238,35 @@ const Spinner = ({ size = 16 }) => (
     }}
   />
 );
+
+const OrderDeletionCountdown = ({ autoDeleteAt }) => {
+  const [now, setNow] = useState(Date.now);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const remainingSeconds = Math.max(0, Math.ceil((autoDeleteAt - now) / 1000));
+  const days = Math.floor(remainingSeconds / 86400);
+  const hours = Math.floor((remainingSeconds % 86400) / 3600);
+  const minutes = Math.floor((remainingSeconds % 3600) / 60);
+  const seconds = remainingSeconds % 60;
+  const countdown = [
+    days ? `${days} ngày` : null,
+    days || hours ? `${hours} giờ` : null,
+    days || hours || minutes ? `${minutes} phút` : null,
+    `${seconds} giây`,
+  ].filter(Boolean).join(" ");
+
+  return (
+    <p className="seller-order-auto-delete" aria-live="off">
+      {remainingSeconds > 0
+        ? `Tự động xóa sau ${countdown}`
+        : "Đã đến hạn xóa, đang đồng bộ..."}
+    </p>
+  );
+};
 
 // ─── Pagination Component ──────────────────────────────────────────────────
 
@@ -407,6 +478,9 @@ export const SellerDashboard = ({
   const [loading, setLoading] =
     useState(true);
 
+  const [refreshing, setRefreshing] =
+    useState(false);
+
   const [feedback, setFeedback] =
     useState("");
 
@@ -535,13 +609,13 @@ export const SellerDashboard = ({
   ] = useState(null);
 
   const refreshDashboard = async () => {
+    setRefreshing(true);
     const [
       productResult,
       categoryResult,
       orderResult,
     ] = await loadSellerData();
-
-    setError("");
+    const failures = [];
 
     if (
       productResult.status === "fulfilled"
@@ -549,6 +623,8 @@ export const SellerDashboard = ({
       setProducts(
         productResult.value || []
       );
+    } else {
+      failures.push("sản phẩm");
     }
 
     if (
@@ -558,6 +634,8 @@ export const SellerDashboard = ({
       setCategories(
         categoryResult.value || []
       );
+    } else {
+      failures.push("danh mục");
     }
 
     if (
@@ -565,12 +643,26 @@ export const SellerDashboard = ({
     ) {
       setOrders(orderResult.value || []);
     } else {
-      setError(
-        "Không thể tải danh sách đơn hàng. Hãy kiểm tra quyền người bán."
-      );
+      failures.push("đơn hàng");
     }
 
     setLoading(false);
+    setRefreshing(false);
+    setError(
+      failures.length
+        ? `Không thể tải lại ${failures.join(", ")}. Vui lòng thử lại.`
+        : ""
+    );
+    return failures.length === 0;
+  };
+
+  const handleRefresh = async () => {
+    setFeedback("");
+    const refreshed = await refreshDashboard();
+    onRefreshProducts?.();
+    if (refreshed) {
+      setFeedback("Đã tải lại sản phẩm, danh mục và đơn hàng.");
+    }
   };
 
   useEffect(() => {
@@ -627,6 +719,27 @@ export const SellerDashboard = ({
   useEffect(() => {
     setOrderPage(1);
   }, [activeOrderStatus]);
+
+  const hasTerminalOrders = orders.some(
+    (order) => order.status === "COMPLETED" || order.status === "CANCELLED"
+  );
+
+  useEffect(() => {
+    if (!hasTerminalOrders) return undefined;
+
+    const refreshOrders = async () => {
+      try {
+        const latestOrders = await orderApi.getAll();
+        setOrders(latestOrders || []);
+      } catch (refreshError) {
+        console.error("Không thể đồng bộ đơn đã hoàn thành/đã hủy:", refreshError);
+        setError("Không thể đồng bộ danh sách đơn hàng. Hãy thử tải lại dữ liệu.");
+      }
+    };
+
+    const intervalId = window.setInterval(refreshOrders, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [hasTerminalOrders]);
 
   const openNewProductForm = () => {
     setEditingProduct(null);
@@ -1449,6 +1562,22 @@ export const SellerDashboard = ({
               : "Quản lý sản phẩm"}
         </h1>
 
+        <div className="seller-heading-actions">
+          <button
+            type="button"
+            className="seller-refresh-button"
+            onClick={handleRefresh}
+            disabled={refreshing || loading}
+            aria-label="Tải lại sản phẩm, danh mục và đơn hàng"
+            title="Tải lại sản phẩm, danh mục và đơn hàng"
+          >
+            <RefreshCw
+              size={16}
+              className={refreshing ? "is-spinning" : ""}
+            />
+            <span>{refreshing ? "Đang tải..." : "Tải lại dữ liệu"}</span>
+          </button>
+
         {section === "products" &&
           !productFormOpen && (
             <button
@@ -1567,6 +1696,7 @@ export const SellerDashboard = ({
             )}
           </div>
         )}
+        </div>
       </div>
 
       {feedback && (
@@ -2495,10 +2625,9 @@ export const SellerDashboard = ({
                           </h2>
 
                           <time>
-                            {new Date(
+                            {formatOrderDate(
+                              order.createdAtEpoch,
                               order.createdAt
-                            ).toLocaleString(
-                              "vi-VN"
                             )}
                           </time>
                         </div>
@@ -2515,6 +2644,12 @@ export const SellerDashboard = ({
                           )?.label ||
                             order.status}
                         </span>
+                        {(order.status === "COMPLETED" || order.status === "CANCELLED") &&
+                          getOrderAutoDeleteAt(order) && (
+                            <OrderDeletionCountdown
+                              autoDeleteAt={getOrderAutoDeleteAt(order)}
+                            />
+                          )}
                       </header>
 
                       <div className="seller-order-customer">

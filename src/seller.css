@@ -652,6 +652,12 @@
   gap: 12px;
 }
 
+.seller-order-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
 .seller-order-header h2 {
   color: #15385f;
   font-size: 14px;
@@ -685,6 +691,23 @@
 .seller-order-status--cancelled {
   border-color: #efc5ca;
   background: #fff1f2;
+  color: #ad3341;
+}
+
+.seller-order-auto-delete {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  color: #64758a;
+  font-size: 10px;
+  font-weight: 650;
+  text-align: left;
+}
+
+.seller-order-status--completed + .seller-order-auto-delete {
+  color: #236235;
+}
+
+.seller-order-status--cancelled + .seller-order-auto-delete {
   color: #ad3341;
 }
 
@@ -801,6 +824,16 @@
 @media (max-width: 480px) {
   .seller-dashboard-heading {
     align-items: flex-start;
+  }
+
+  .seller-heading-actions {
+    flex-wrap: wrap;
+  }
+
+  .seller-refresh-button {
+    min-height: 36px;
+    padding: 0 9px;
+    font-size: 11px;
   }
 
   .seller-dashboard-heading:has(.seller-export) {

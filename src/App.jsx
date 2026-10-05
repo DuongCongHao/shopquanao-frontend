@@ -427,6 +427,7 @@ function InnerApp() {
                 size: variantMeta.size,
                 color: variantMeta.color,
                 imgUrl: variantMeta.imgUrl,
+                stock: variant.stock ?? 10,
               });
               setCheckoutVariantId(null);
               navigate("order");

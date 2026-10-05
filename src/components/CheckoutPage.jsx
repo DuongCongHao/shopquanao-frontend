@@ -146,7 +146,16 @@ const ConfirmPopup = ({ formData, cart, onEdit, onConfirm }) => {
 export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem = null }) => {
   const { cart, removeFromCart, updateQuantity } = useCart();
   const { user } = useAuth();
-  const checkoutItem = directCheckoutItem || cart.items.find(
+  const [directQuantity, setDirectQuantity] = useState(
+    directCheckoutItem?.quantity || 1
+  );
+  const checkoutItem = directCheckoutItem
+    ? {
+        ...directCheckoutItem,
+        quantity: directQuantity,
+        subtotal: directCheckoutItem.price * directQuantity,
+      }
+    : cart.items.find(
     (item) => String(item.variantId) === String(checkoutVariantId)
   ) || (checkoutVariantId == null && cart.items.length === 1 ? cart.items[0] : null);
   const checkoutCart = checkoutItem
@@ -237,7 +246,11 @@ export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem =
                 <button
                   type="button"
                   className="checkout-qty-btn"
-                  onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                  onClick={() => {
+                    const quantity = Math.max(1, item.quantity - 1);
+                    if (directCheckoutItem) setDirectQuantity(quantity);
+                    else updateQuantity(item.id, quantity);
+                  }}
                   disabled={item.quantity <= 1}
                   aria-label="Giảm số lượng"
                 >
@@ -247,7 +260,16 @@ export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem =
                 <button
                   type="button"
                   className="checkout-qty-btn"
-                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                  onClick={() => {
+                    const quantity = item.quantity + 1;
+                    if (directCheckoutItem) setDirectQuantity(quantity);
+                    else updateQuantity(item.id, quantity);
+                  }}
+                  disabled={
+                    directCheckoutItem &&
+                    Number.isFinite(Number(directCheckoutItem.stock)) &&
+                    item.quantity >= Number(directCheckoutItem.stock)
+                  }
                   aria-label="Tăng số lượng"
                 >
                   <Plus size={12} />
@@ -352,7 +374,7 @@ export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem =
             <section className="checkout-order-panel checkout-panel">
               <h2><ShoppingBag size={18} />Đơn hàng riêng ({checkoutCart.totalItems} món)</h2>
               {checkoutCart.items.length
-                ? renderOrderItems(checkoutCart.items, !directCheckoutItem)
+                ? renderOrderItems(checkoutCart.items, true)
                 : <p className="checkout-empty-order">Không tìm thấy món đã chọn. Hãy quay lại giỏ hàng.</p>}
               <div className="checkout-order-total">
                 <span>Tổng thanh toán</span>
