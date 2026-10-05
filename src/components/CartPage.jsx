@@ -49,7 +49,7 @@ export const CartPage = ({ onGoBack, onGoHome, onGoOrder }) => {
             <ArrowLeft size={16} />
           </button>
           <div className="cart-title-group">
-            <span className="cart-kicker">HUGAN STORE / ĐƠN HÀNG</span>
+            <span className="cart-kicker">MetroFootBall Store / ĐƠN HÀNG</span>
             <h1>Giỏ hàng</h1>
           </div>
           <span className="cart-item-count">{cart.totalItems} món</span>

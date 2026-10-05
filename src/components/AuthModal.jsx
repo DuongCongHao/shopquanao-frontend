@@ -64,7 +64,7 @@ export const AuthModal = ({ onClose }) => {
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 mx-auto flex items-center justify-center text-black font-extrabold text-2xl shadow-[0_0_20px_rgba(234,179,8,0.5)]">
             H
           </div>
-          <h2 className="text-2xl font-black text-white">HUGAN Store</h2>
+          <h2 className="text-2xl font-black text-white">MetroFootBall Store</h2>
           <p className="text-xs text-slate-400">Đăng nhập tài khoản để trải nghiệm dịch vụ tốt nhất</p>
         </div>
 

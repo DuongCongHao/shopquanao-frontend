@@ -54,7 +54,7 @@ export const CheckoutModal = ({ onClose }) => {
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-white">Đặt Hàng Thành Công!</h2>
               <p className="text-sm text-slate-300 max-w-md mx-auto">
-                Cảm ơn bạn đã tin tưởng mua sắm tại <strong className="text-amber-400">HUGAN Store</strong>. Chúng tôi sẽ liên hệ sớm nhất để xác nhận đơn hàng.
+                Cảm ơn bạn đã tin tưởng mua sắm tại <strong className="text-amber-400">MetroFootBall Store</strong>. Chúng tôi sẽ liên hệ sớm nhất để xác nhận đơn hàng.
               </p>
             </div>
             <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl max-w-sm mx-auto text-left text-xs space-y-1">

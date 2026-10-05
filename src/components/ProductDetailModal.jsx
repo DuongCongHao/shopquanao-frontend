@@ -123,7 +123,7 @@ export const ProductDetailModal = ({ product, onClose }) => {
 
               {/* Description */}
               <p className="text-slate-300 text-sm mt-4 leading-relaxed font-normal">
-                {product.description || "Sản phẩm thời trang thiết kế độc quyền từ HUGAN Store. Vải mềm mại, co giãn tốt và chuẩn form dáng."}
+                {product.description || "Sản phẩm thời trang thiết kế độc quyền từ MetroFootBall Store. Vải mềm mại, co giãn tốt và chuẩn form dáng."}
               </p>
             </div>
 
