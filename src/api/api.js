@@ -32,8 +32,8 @@ export const authApi = {
       body: JSON.stringify(credentials),
     }),
 
-  heartbeat: async () =>
-    apiRequest("/api/v1/auth/heartbeat", { method: "POST" }),
+  heartbeat: async (token) =>
+    apiRequest("/api/v1/auth/heartbeat", { method: "POST" }, token),
 
   logout: async (token) =>
     apiRequest("/api/v1/auth/logout", { method: "POST" }, token),

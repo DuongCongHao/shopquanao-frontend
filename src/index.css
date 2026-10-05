@@ -940,3 +940,130 @@ button:focus-visible {
   outline-offset: 3px;
   box-shadow: 0 0 0 4px rgb(40 101 165 / 16%);
 }
+
+/* Keep the seller product form consistent with the white and blue dashboard. */
+.seller-form {
+  border-color: #dce5ef;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(10 39 73 / 8%);
+}
+
+.seller-form-heading {
+  border-color: #dce5ef;
+}
+
+.seller-form-heading > button {
+  border: 1px solid #cbd8e8;
+  border-radius: 6px;
+  background: #fff;
+  color: #194a82;
+}
+
+.seller-form-heading > button:hover {
+  background: #edf4fc;
+}
+
+.seller-form label > span,
+.seller-image-upload-label > span {
+  color: #40546c;
+}
+
+.seller-image-drop-zone {
+  border-color: #9db5d0;
+  border-radius: 8px;
+  background: #f5f8fc;
+}
+
+.seller-image-drop-zone:hover {
+  border-color: #2865a5;
+  background: #edf4fc;
+}
+
+.seller-image-drop-zone:focus-within {
+  border-color: #2865a5;
+  box-shadow: 0 0 0 3px rgb(40 101 165 / 12%);
+}
+
+.seller-image-drop-icon {
+  border-color: #cbd8e8;
+  background: #e8f0fa;
+  color: #194a82;
+}
+
+.seller-image-drop-zone > strong {
+  color: #25364b;
+}
+
+.seller-image-drop-zone > p {
+  color: #64758a;
+}
+
+.seller-image-drop-zone kbd {
+  border-color: #cbd8e8;
+  background: #fff;
+  color: #194a82;
+}
+
+.seller-image-drop-or,
+.seller-image-drop-zone > small {
+  color: #748397 !important;
+}
+
+.seller-image-select-button {
+  border-color: #194a82;
+  border-radius: 6px;
+  background: #194a82;
+  color: #fff;
+}
+
+.seller-image-select-button:hover {
+  background: #2865a5;
+}
+
+.seller-image-preview {
+  border-color: #dce5ef;
+  background: #f1f5f9;
+}
+
+.seller-image-preview-wrap > button {
+  border-color: #efc5ca;
+  background: rgb(255 255 255 / 94%);
+  color: #ad3341;
+}
+
+.seller-image-preview-wrap > button:hover {
+  border-color: #ad3341;
+  background: #fff1f2;
+  color: #8e2531;
+}
+
+.seller-image-preview-wrap > span {
+  background: #194a82;
+  color: #fff;
+}
+
+.seller-color-grid-label {
+  color: #40546c;
+}
+
+.seller-color-size-tag {
+  border-color: #cbd8e8;
+  background: #edf4fc;
+  color: #194a82;
+}
+
+.seller-form .seller-color-row input {
+  border-color: #cbd8e8;
+  background: #fff;
+  color: #25364b;
+}
+
+.seller-form .seller-color-row input::placeholder {
+  color: #7c8da2;
+}
+
+.seller-form .seller-color-row input:focus {
+  border-color: #2865a5;
+  box-shadow: 0 0 0 2px rgb(40 101 165 / 14%);
+}

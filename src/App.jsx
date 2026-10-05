@@ -29,7 +29,7 @@ const getInitialView = (isAdmin) => {
 
 // Inner app uses context - needs to be inside providers
 function InnerApp() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, sessionNotice } = useAuth();
   // view: "home" | "auth" | "product-detail" | "cart" | "order"
   const [currentView, setCurrentView] = useState(() => getInitialView(isAdmin));
   const [prevView, setPrevView] = useState("home");
@@ -115,6 +115,13 @@ function InnerApp() {
       setCurrentView("home");
     }
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!sessionNotice) return;
+    window.history.replaceState({}, "", "/");
+    setSelectedProduct(null);
+    setCurrentView("home");
+  }, [sessionNotice]);
 
   const refreshPopularity = async () => {
     try {
