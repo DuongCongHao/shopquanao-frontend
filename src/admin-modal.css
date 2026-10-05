@@ -1,0 +1,242 @@
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 20px;
+  background: rgb(0 0 0 / 78%);
+  backdrop-filter: blur(6px);
+}
+
+.admin-modal {
+  display: flex;
+  width: min(100%, 1120px);
+  max-height: min(90vh, 920px);
+  flex-direction: column;
+  overflow: hidden;
+  padding: 22px;
+  border: 1px solid #514426;
+  border-radius: 7px;
+  background: #15140f;
+  color: #f5f0dc;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 62%);
+}
+
+.admin-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #393426;
+}
+
+.admin-modal-header h2 {
+  color: #f5f0dc;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.admin-modal-header p {
+  margin-top: 3px;
+  color: #aaa18a;
+  font-size: 11px;
+}
+
+.admin-modal-header button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border: 1px solid #393426;
+  border-radius: 4px;
+  color: #d8ceb2;
+}
+
+.admin-modal-header button:hover {
+  border-color: #d6ad36;
+  color: #f0c84b;
+}
+
+.admin-modal-tabs {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  margin: 14px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #393426;
+}
+
+.admin-modal-tabs button {
+  display: inline-flex;
+  min-height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid #393426;
+  border-radius: 4px;
+  background: #100f0c;
+  color: #bdb49b;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.admin-modal-tabs button:hover {
+  border-color: #77622b;
+  color: #f5f0dc;
+}
+
+.admin-modal-tabs button[class*="bg-amber"] {
+  border-color: #d6ad36;
+  background: #dfb83e;
+  color: #15130b;
+}
+
+.admin-modal-content {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.admin-modal-content h3 {
+  color: #ddd4bc;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.admin-loading-state {
+  padding: 18px 12px;
+  color: #bdb49b;
+  font-size: 12px;
+}
+
+.admin-table-wrap {
+  overflow: auto;
+  border: 1px solid #393426;
+  border-radius: 5px;
+  background: #0e0d0a;
+}
+
+.admin-modal table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #d8ceb2;
+  font-size: 11px;
+  text-align: left;
+}
+
+.admin-modal th {
+  padding: 10px 12px;
+  border-bottom: 1px solid #403a2a;
+  background: #1a1811;
+  color: #eac34b;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-modal td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #29261c;
+  vertical-align: middle;
+}
+
+.admin-modal tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-modal tbody tr:hover {
+  background: #19170f;
+}
+
+.admin-modal td img {
+  width: 40px;
+  height: 48px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.admin-modal form {
+  gap: 12px;
+}
+
+.admin-modal input,
+.admin-modal select,
+.admin-modal textarea {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #393426;
+  border-radius: 4px;
+  outline: none;
+  background: #0e0d0a;
+  color: #f5f0dc;
+  font: inherit;
+  font-size: 12px;
+}
+
+.admin-modal textarea {
+  min-height: 72px;
+}
+
+.admin-modal input:focus,
+.admin-modal select:focus,
+.admin-modal textarea:focus {
+  border-color: #d6ad36;
+}
+
+.admin-modal label {
+  color: #d8ceb2;
+}
+
+.admin-modal .btn-primary {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid #d6ad36;
+  border-radius: 4px;
+  background: #dfb83e;
+  color: #15130b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-modal .btn-primary:hover {
+  background: #f0cc59;
+}
+
+.admin-modal .btn-secondary {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid #514426;
+  border-radius: 4px;
+  background: transparent;
+  color: #e6c452;
+  font-size: 11px;
+}
+
+@media (max-width: 700px) {
+  .admin-modal-backdrop {
+    align-items: stretch;
+    padding: 8px;
+  }
+
+  .admin-modal {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    margin: auto 0;
+    padding: 14px;
+    border-radius: 5px;
+  }
+
+  .admin-modal-header h2 {
+    font-size: 15px;
+  }
+
+  .admin-modal table {
+    min-width: 650px;
+  }
+}
