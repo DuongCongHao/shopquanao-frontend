@@ -76,7 +76,7 @@ export const ProductCard = ({ product, onSelectProduct, rank }) => {
         )}
         {/* Category Badge */}
         <span className="catalog-product-category absolute top-1.5 left-1.5 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full">
-          {product.categoryName || "Thời Trang"}
+          {product.categoryNames?.join(", ") || product.categoryName || "Thời Trang"}
         </span>
         {rank && <span className="catalog-rank">#{String(rank).padStart(2, "0")}</span>}
         {/* Variant Badge */}

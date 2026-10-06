@@ -113,6 +113,15 @@ const ConfirmPopup = ({ formData, cart, onEdit, onConfirm }) => {
                     <p className="co-popup-item-meta">
                       Size {item.size} · {item.color} · SL {item.quantity}
                     </p>
+                    {item.printType && (
+                      <p className="co-popup-item-meta">
+                        In {item.printType === "PU" ? "PU" : "Decal"} · Áo {formatCurrency(item.price)}
+                        {" + phí in "}
+                        {formatCurrency(item.printingPrice ?? item.printPrice)}
+                        {" / sản phẩm · "}
+                        {item.note || "Không có ghi chú"}
+                      </p>
+                    )}
                   </div>
                   <strong className="co-popup-item-price">
                     {formatCurrency(item.subtotal || item.price * item.quantity)}
@@ -146,25 +155,37 @@ const ConfirmPopup = ({ formData, cart, onEdit, onConfirm }) => {
 export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem = null }) => {
   const { cart, removeFromCart, updateQuantity } = useCart();
   const { user } = useAuth();
-  const [directQuantity, setDirectQuantity] = useState(
-    directCheckoutItem?.quantity || 1
+  const directItems = Array.isArray(directCheckoutItem)
+    ? directCheckoutItem
+    : directCheckoutItem
+      ? [directCheckoutItem]
+      : [];
+  const [directQuantities, setDirectQuantities] = useState(() =>
+    Object.fromEntries(directItems.map((item) => [item.variantId, item.quantity || 1]))
   );
-  const checkoutItem = directCheckoutItem
-    ? {
-        ...directCheckoutItem,
-        quantity: directQuantity,
-        subtotal: directCheckoutItem.price * directQuantity,
-      }
-    : cart.items.find(
+  const checkoutItem = cart.items.find(
     (item) => String(item.variantId) === String(checkoutVariantId)
   ) || (checkoutVariantId == null && cart.items.length === 1 ? cart.items[0] : null);
-  const checkoutCart = checkoutItem
-    ? {
-        items: [checkoutItem],
-        totalItems: checkoutItem.quantity,
-        totalPrice: checkoutItem.subtotal || checkoutItem.price * checkoutItem.quantity,
-      }
-    : { items: [], totalItems: 0, totalPrice: 0 };
+  const checkoutItems = directItems.length
+    ? directItems.map((item) => {
+        const quantity = Number(directQuantities[item.variantId] ?? item.quantity);
+        return {
+          ...item,
+          quantity,
+          subtotal: (item.price + Number(item.printingPrice || 0)) * quantity,
+        };
+      })
+    : checkoutItem
+      ? [checkoutItem]
+      : [];
+  const checkoutCart = {
+    items: checkoutItems,
+    totalItems: checkoutItems.reduce((total, item) => total + item.quantity, 0),
+    totalPrice: checkoutItems.reduce(
+      (total, item) => total + (item.subtotal || item.price * item.quantity),
+      0
+    ),
+  };
   const [formData, setFormData] = useState({
     fullName: user?.fullName || "",
     address: "",
@@ -221,26 +242,40 @@ export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem =
         items: checkoutCart.items.map((item) => ({
           variantId: item.variantId,
           quantity: item.quantity,
+          ...(item.printType ? { printType: item.printType, note: item.note } : {}),
         })),
       });
       setOrder(createdOrder);
-      if (!directCheckoutItem) await removeFromCart(checkoutItem.id);
+      if (!directItems.length && checkoutItem) await removeFromCart(checkoutItem.id);
     } catch (error) {
       placingRef.current = false;
       setSubmitError(error.message || "Không thể tạo đơn hàng. Vui lòng thử lại.");
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, checkoutCart.items, checkoutItem, directCheckoutItem, removeFromCart]);
+  }, [formData, checkoutCart.items, checkoutItem, directItems.length, removeFromCart]);
 
   const renderOrderItems = (items, editable = false) => (
     <div className="checkout-order-items">
-      {items.map((item) => (
-        <article key={item.id} className="checkout-order-item">
+      {items.map((item) => {
+        const directStock = directItems.find(
+          (directItem) => directItem.variantId === item.variantId
+        )?.stock;
+        return (
+        <article key={item.id || item.variantId} className="checkout-order-item">
           <CheckoutItemImage src={item.imgUrl} alt={item.productName} />
           <div className="checkout-order-item-info">
             <h3>{item.productName.replace(/\s+HUGAN\b/gi, "")}</h3>
             <p>Size {item.size} · {item.color}</p>
+            {item.printType && (
+              <p className="checkout-print-meta">
+                In {item.printType === "PU" ? "PU" : "Decal"} · Áo {formatCurrency(item.garmentPrice ?? item.price)}
+                {" + phí in "}
+                {formatCurrency(item.printingPrice ?? item.printPrice)}
+                {" / sản phẩm"}
+                {item.note ? ` · Ghi chú: ${item.note}` : " · Không có ghi chú"}
+              </p>
+            )}
             {editable ? (
               <div className="checkout-qty-control">
                 <button
@@ -248,7 +283,9 @@ export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem =
                   className="checkout-qty-btn"
                   onClick={() => {
                     const quantity = Math.max(1, item.quantity - 1);
-                    if (directCheckoutItem) setDirectQuantity(quantity);
+                    if (directItems.length) {
+                      setDirectQuantities((current) => ({ ...current, [item.variantId]: quantity }));
+                    }
                     else updateQuantity(item.id, quantity);
                   }}
                   disabled={item.quantity <= 1}
@@ -262,13 +299,15 @@ export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem =
                   className="checkout-qty-btn"
                   onClick={() => {
                     const quantity = item.quantity + 1;
-                    if (directCheckoutItem) setDirectQuantity(quantity);
+                    if (directItems.length) {
+                      setDirectQuantities((current) => ({ ...current, [item.variantId]: quantity }));
+                    }
                     else updateQuantity(item.id, quantity);
                   }}
                   disabled={
-                    directCheckoutItem &&
-                    Number.isFinite(Number(directCheckoutItem.stock)) &&
-                    item.quantity >= Number(directCheckoutItem.stock)
+                    directItems.length > 0 &&
+                    Number.isFinite(Number(directStock)) &&
+                    item.quantity >= Number(directStock)
                   }
                   aria-label="Tăng số lượng"
                 >
@@ -281,7 +320,8 @@ export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem =
           </div>
           <strong>{formatCurrency(item.subtotal || item.price * item.quantity)}</strong>
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 

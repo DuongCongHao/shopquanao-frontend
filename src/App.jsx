@@ -234,11 +234,20 @@ function InnerApp() {
   };
 
   const filteredProducts = products.filter((p) => {
-    const matchCat = selectedCategory === null || Number(p.categoryId) === Number(selectedCategory);
+    const productCategoryIds = p.categoryIds?.length
+      ? p.categoryIds
+      : p.categoryId != null
+        ? [p.categoryId]
+        : [];
+    const matchCat = selectedCategory === null || productCategoryIds.some(
+      (categoryId) => Number(categoryId) === Number(selectedCategory)
+    );
     const matchQ = !searchQuery.trim() ||
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.categoryName?.toLowerCase().includes(searchQuery.toLowerCase());
+      (p.categoryNames || [p.categoryName]).some(
+        (categoryName) => categoryName?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     return matchCat && matchQ;
   }).sort((a, b) => {
     if (isBestSellersView) {
@@ -415,20 +424,24 @@ function InnerApp() {
           <ProductDetailPage
             product={selectedProduct}
             onGoBack={() => navigate("home")}
-            onOpenCheckout={(variant, variantMeta) => {
-              const price = variantMeta.price ?? selectedProduct.price;
-              setDirectCheckoutItem({
-                id: `direct-${variant.id}`,
-                variantId: variant.id,
-                quantity: 1,
-                price,
-                subtotal: price,
-                productName: variantMeta.productName,
-                size: variantMeta.size,
-                color: variantMeta.color,
-                imgUrl: variantMeta.imgUrl,
-                stock: variant.stock ?? 10,
-              });
+            onOpenCheckout={(variantOrItems, variantMeta) => {
+              if (Array.isArray(variantOrItems)) {
+                setDirectCheckoutItem(variantOrItems);
+              } else {
+                const price = variantMeta.price ?? selectedProduct.price;
+                setDirectCheckoutItem({
+                  id: `direct-${variantOrItems.id}`,
+                  variantId: variantOrItems.id,
+                  quantity: 1,
+                  price,
+                  subtotal: price,
+                  productName: variantMeta.productName,
+                  size: variantMeta.size,
+                  color: variantMeta.color,
+                  imgUrl: variantMeta.imgUrl,
+                  stock: variantOrItems.stock ?? 10,
+                });
+              }
               setCheckoutVariantId(null);
               navigate("order");
             }}

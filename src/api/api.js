@@ -94,7 +94,14 @@ function normalizeProduct(p) {
   // imgUrl: ưu tiên images[0], rồi imgUrl gốc (bỏ blob)
   let imgUrl = images[0] || null;
   if (!imgUrl && p.imgUrl && !p.imgUrl.startsWith("blob:")) imgUrl = p.imgUrl;
-  return { ...p, images, imgUrl: imgUrl || "" };
+  const categories = Array.isArray(p.categories) && p.categories.length
+    ? p.categories
+    : p.categoryId
+      ? [{ id: p.categoryId, name: p.categoryName || "" }]
+      : [];
+  const categoryIds = p.categoryIds || categories.map((category) => category.id);
+  const categoryNames = p.categoryNames || categories.map((category) => category.name).filter(Boolean);
+  return { ...p, images, imgUrl: imgUrl || "", categories, categoryIds, categoryNames };
 }
 
 export const productApi = {
@@ -212,6 +219,26 @@ function normalizeOrder(order) {
 
 export const orderApi = {
   create: async (orderRequest) => {
+    const hasPrintItems = (orderRequest.items || []).some((item) => item.printType);
+    if (hasPrintItems) {
+      let capability;
+      try {
+        capability = await apiRequest("/api/v1/orders/printing-capability");
+      } catch (error) {
+        if ([401, 403, 404].includes(error.status)) {
+          throw new Error(
+            "Máy chủ đặt hàng chưa được cập nhật tính năng in riêng. Vui lòng báo cửa hàng cập nhật máy chủ trước khi đặt in."
+          );
+        }
+        throw error;
+      }
+      if (capability?.printingSupported !== true) {
+        throw new Error(
+          "Máy chủ đặt hàng chưa xác nhận hỗ trợ in riêng. Vui lòng thử lại sau khi cửa hàng cập nhật máy chủ."
+        );
+      }
+    }
+
     const data = await apiRequest("/api/v1/orders", {
       method: "POST",
       body: JSON.stringify(orderRequest),

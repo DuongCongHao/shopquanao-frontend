@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Download,
   Edit3,
+  Eye,
   ImagePlus,
   Loader2,
   PackagePlus,
@@ -22,6 +23,8 @@ import {
   productApi,
   uploadApi,
 } from "../api/api";
+import { CategoryPicker } from "./CategoryPicker";
+import { resolveCategoryNames } from "../utils/categorySelection";
 
 import "../seller.css";
 
@@ -119,6 +122,13 @@ const orderToExcelRow = (order) => {
           item.size || ""
         } · ${item.color || ""} × ${
           item.quantity || 0
+        }${
+          item.printType
+            ? ` · Áo ${formatCurrency(item.garmentPrice ?? item.price)} + in ${formatCurrency(item.printPrice || 0)} (${
+                item.printType === "PU" ? "PU" : "Decal"
+              })${item.note ? ` · Ghi chú: ${item.note}` : ""
+              }`
+            : ""
         } (${formatCurrency(item.subtotal)})`
     )
     .join("\n");
@@ -475,6 +485,8 @@ export const SellerDashboard = ({
   const [orders, setOrders] =
     useState([]);
 
+  const [orderDetails, setOrderDetails] = useState(null);
+
   const [loading, setLoading] =
     useState(true);
 
@@ -491,11 +503,6 @@ export const SellerDashboard = ({
     productFormOpen,
     setProductFormOpen,
   ] = useState(false);
-
-  const [
-    categoryInputMode,
-    setCategoryInputMode,
-  ] = useState("manual");
 
   const [
     categoryCreateOpen,
@@ -528,7 +535,7 @@ export const SellerDashboard = ({
       name: "",
       images: [],
       price: "",
-      categoryName: "",
+      categoryText: "",
     });
 
   const [
@@ -748,14 +755,8 @@ export const SellerDashboard = ({
       name: "",
       images: [],
       price: "",
-      categoryName: "",
+      categoryText: "",
     });
-
-    setCategoryInputMode(
-      categories.length
-        ? "existing"
-        : "manual"
-    );
 
     setSizeText("S, M, L");
     setColorMap({});
@@ -777,19 +778,10 @@ export const SellerDashboard = ({
           ? [product.imgUrl]
           : [],
       price: product.price || "",
-      categoryName:
-        product.categoryName || "",
+      categoryText: product.categoryNames?.length
+        ? product.categoryNames.join(", ")
+        : product.categoryName || "",
     });
-
-    setCategoryInputMode(
-      categories.some(
-        (category) =>
-          category.name ===
-          product.categoryName
-      )
-        ? "existing"
-        : "manual"
-    );
 
     setSizeText(
       getUniqueSizes(product).join(", ")
@@ -803,8 +795,18 @@ export const SellerDashboard = ({
           variant.size &&
           variant.color
         ) {
-          map[variant.size] =
-            variant.color;
+          const existingColors = map[variant.size]
+            ? map[variant.size]
+                .split(",")
+                .map((color) => color.trim())
+                .filter(Boolean)
+            : [];
+
+          if (!existingColors.includes(variant.color.trim())) {
+            existingColors.push(variant.color.trim());
+          }
+
+          map[variant.size] = existingColors.join(", ");
         }
       }
     );
@@ -1046,7 +1048,7 @@ export const SellerDashboard = ({
       !productForm.images.length ||
       !price ||
       !sizes.length ||
-      !productForm.categoryName.trim()
+      !productForm.categoryText.trim()
     ) {
       setError(
         "Vui lòng nhập tên, chọn ít nhất một ảnh, giá, danh mục và kích cỡ."
@@ -1057,69 +1059,72 @@ export const SellerDashboard = ({
     setSavingProduct(true);
 
     try {
-      let category =
-        categories.find(
-          (item) =>
-            item.name
-              .trim()
-              .toLocaleLowerCase(
-                "vi"
-              ) ===
-            productForm.categoryName
-              .trim()
-              .toLocaleLowerCase(
-                "vi"
-              )
-        );
+      const selectedCategories = await resolveCategoryNames(
+        productForm.categoryText,
+        categories,
+        categoryApi.create
+      );
+      const selectedCategoryIds = selectedCategories.map(
+        (category) => category.id
+      );
 
-      if (!category) {
-        category =
-          await categoryApi.create({
-            name: productForm.categoryName.trim(),
+      const variants = sizes.flatMap(
+        (size, sizeIndex) => {
+          const enteredColors = [
+            ...new Set(
+              (colorMap[size] || "")
+                .split(",")
+                .map((color) => color.trim())
+                .filter(Boolean)
+            ),
+          ];
+
+          const existingVariantsForSize =
+            editingProduct?.variants?.filter(
+              (variant) => variant.size === size
+            ) || [];
+
+          const colors =
+            enteredColors.length > 0
+              ? enteredColors
+              : existingVariantsForSize.length > 0
+                ? [
+                    ...new Set(
+                      existingVariantsForSize
+                        .map((variant) => variant.color?.trim())
+                        .filter(Boolean)
+                    ),
+                  ]
+                : ["Mặc định"];
+
+          return colors.map((color, colorIndex) => {
+            const previous =
+              existingVariantsForSize.find(
+                (variant) =>
+                  variant.color?.trim().toLocaleLowerCase("vi") ===
+                  color.toLocaleLowerCase("vi")
+              );
+
+            return {
+              size,
+              color,
+              price,
+              stock: previous?.stock ?? 100,
+              sku:
+                previous?.sku ||
+                `SKU-${Date.now()}-${sizeIndex}-${colorIndex}`,
+              imgUrl: previous?.imgUrl || "",
+            };
           });
-      }
-
-      if (!category?.id) {
-        throw new Error(
-          "Không thể tạo danh mục mới."
-        );
-      }
-
-      const variants = sizes.map(
-        (size, index) => {
-          const previous =
-            editingProduct?.variants?.find(
-              (variant) =>
-                variant.size === size
-            );
-
-          return {
-            size,
-            color:
-              colorMap[
-                size
-              ]?.trim() ||
-              previous?.color ||
-              "Mặc định",
-            price,
-            stock:
-              previous?.stock ?? 100,
-            sku:
-              previous?.sku ||
-              `SKU-${Date.now()}-${index}`,
-            imgUrl:
-              previous?.imgUrl || "",
-          };
         }
       );
 
       const payload = {
         name: productForm.name.trim(),
         price,
-        categoryId: Number(
-          category.id
-        ),
-        categoryName: category.name,
+        categoryIds: selectedCategoryIds,
+        categoryId: selectedCategoryIds[0],
+        categoryNames: selectedCategories.map((category) => category.name),
         images: productForm.images,
         imgUrl:
           productForm.images[0] || "",
@@ -2013,115 +2018,13 @@ export const SellerDashboard = ({
                 />
               </label>
 
-              <label>
-                <span>
-                  Danh mục
-                </span>
-
-                {categories.length >
-                  0 && (
-                  <select
-                    value={
-                      categoryInputMode ===
-                      "manual"
-                        ? "__manual__"
-                        : productForm.categoryName
-                    }
-                    onChange={(
-                      event
-                    ) => {
-                      const value =
-                        event.target
-                          .value;
-
-                      if (
-                        value ===
-                        "__manual__"
-                      ) {
-                        setCategoryInputMode(
-                          "manual"
-                        );
-
-                        setProductForm(
-                          (
-                            current
-                          ) => ({
-                            ...current,
-                            categoryName:
-                              "",
-                          })
-                        );
-                      } else {
-                        setCategoryInputMode(
-                          "existing"
-                        );
-
-                        setProductForm(
-                          (
-                            current
-                          ) => ({
-                            ...current,
-                            categoryName:
-                              value,
-                          })
-                        );
-                      }
-                    }}
-                  >
-                    <option value="">
-                      Chọn danh mục có
-                      sẵn
-                    </option>
-
-                    {categories.map(
-                      (
-                        category
-                      ) => (
-                        <option
-                          key={
-                            category.id
-                          }
-                          value={
-                            category.name
-                          }
-                        >
-                          {
-                            category.name
-                          }
-                        </option>
-                      )
-                    )}
-
-                    <option value="__manual__">
-                      Nhập tay danh mục
-                      mới
-                    </option>
-                  </select>
-                )}
-
-                {(categoryInputMode ===
-                  "manual" ||
-                  categories.length ===
-                    0) && (
-                  <input
-                    required
-                    value={
-                      productForm.categoryName
-                    }
-                    onChange={(
-                      event
-                    ) =>
-                      setProductForm({
-                        ...productForm,
-                        categoryName:
-                          event.target
-                            .value,
-                      })
-                    }
-                    placeholder="Nhập tên danh mục"
-                  />
-                )}
-              </label>
+              <CategoryPicker
+                categories={categories}
+                value={productForm.categoryText}
+                onChange={(categoryText) =>
+                  setProductForm((current) => ({ ...current, categoryText }))
+                }
+              />
             </div>
 
             <label>
@@ -2352,14 +2255,17 @@ export const SellerDashboard = ({
               (category) => {
                 const productCount =
                   products.filter(
-                    (product) =>
-                      Number(
-                        product.categoryId
-                      ) ===
-                      Number(
-                        category.id
-                      )
-                  ).length;
+                  (product) => {
+                    const productCategoryIds = product.categoryIds?.length
+                      ? product.categoryIds
+                      : product.categoryId != null
+                        ? [product.categoryId]
+                        : [];
+                    return productCategoryIds.some(
+                      (categoryId) => Number(categoryId) === Number(category.id)
+                    );
+                  }
+                ).length;
 
                 const isEditing =
                   editingCategoryId ===
@@ -2617,12 +2523,15 @@ export const SellerDashboard = ({
                     >
                       <header className="seller-order-header">
                         <div>
-                          <h2>
-                            Đơn #
-                            {
-                              order.id
-                            }
-                          </h2>
+                          <button
+                            type="button"
+                            className="seller-order-details-trigger"
+                            onClick={() => setOrderDetails(order)}
+                            aria-label={`Xem toàn bộ đơn hàng ${order.id}`}
+                          >
+                            <strong>Đơn #{order.id}</strong>
+                            <span><Eye size={13} /> Xem chi tiết</span>
+                          </button>
 
                           <time>
                             {formatOrderDate(
@@ -2682,44 +2591,35 @@ export const SellerDashboard = ({
                         {order.items.map(
                           (item) => (
                             <div
-                              className="seller-order-line"
+                              className="seller-order-line-wrap"
                               key={
                                 item.id
                               }
                             >
-                              <img
-                                src={
-                                  item.imgUrl
-                                }
-                                alt={
-                                  item.productName
-                                }
-                              />
-
-                              <span>
-                                {item.productName.replace(
-                                  /\s+HUGAN\b/gi,
-                                  ""
-                                )}{" "}
-                                ·{" "}
-                                {
-                                  item.size
-                                }{" "}
-                                ·{" "}
-                                {
-                                  item.color
-                                }{" "}
-                                ×{" "}
-                                {
-                                  item.quantity
-                                }
-                              </span>
-
-                              <strong>
-                                {formatCurrency(
-                                  item.subtotal
-                                )}
-                              </strong>
+                              <div className="seller-order-line">
+                                <img
+                                  src={item.imgUrl}
+                                  alt={item.productName}
+                                />
+                                <span>
+                                  {item.productName.replace(/\s+HUGAN\b/gi, "")} · {item.size} · {item.color} × {item.quantity}
+                                </span>
+                                <strong>{formatCurrency(item.subtotal)}</strong>
+                              </div>
+                              {item.printType && (
+                                <details className="seller-order-print-details">
+                                  <summary>
+                                    In {item.printType === "PU" ? "PU" : "Decal"}
+                                    {item.printPrice ? ` · ${formatCurrency(item.printPrice)}/sp` : ""}
+                                    {item.note ? " · Xem ghi chú" : ""}
+                                  </summary>
+                                  <p>
+                                    Giá áo: {formatCurrency(item.garmentPrice ?? item.price)} / sản phẩm · Phí in: {formatCurrency(item.printPrice || 0)} / sản phẩm
+                                    <br />
+                                    Ghi chú: {item.note || "Không có ghi chú cho loại in này."}
+                                  </p>
+                                </details>
+                              )}
                             </div>
                           )
                         )}
@@ -3113,6 +3013,88 @@ export const SellerDashboard = ({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {orderDetails && (
+        <div
+          className="seller-dialog-backdrop seller-order-details-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setOrderDetails(null);
+          }}
+        >
+          <section
+            className="seller-order-details-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="seller-order-details-title"
+          >
+            <header className="seller-order-details-header">
+              <div>
+                <span>Chi tiết đơn hàng</span>
+                <h2 id="seller-order-details-title">Đơn #{orderDetails.id}</h2>
+                <time>
+                  {formatOrderDate(orderDetails.createdAtEpoch, orderDetails.createdAt)}
+                </time>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOrderDetails(null)}
+                aria-label="Đóng chi tiết đơn hàng"
+              >
+                <X size={19} />
+              </button>
+            </header>
+
+            <div className="seller-order-details-content">
+              <section className="seller-order-details-customer">
+                <h3>Thông tin khách hàng</h3>
+                <p><strong>Họ tên:</strong> {orderDetails.customerName}</p>
+                <p><strong>Số điện thoại:</strong> {orderDetails.customerPhone}</p>
+                <p><strong>Email:</strong> {orderDetails.customerEmail}</p>
+                <p><strong>Địa chỉ:</strong> {orderDetails.customerAddress}</p>
+                <p>
+                  <strong>Trạng thái:</strong>{" "}
+                  {ORDER_STATUSES.find((status) => status.value === orderDetails.status)?.label || orderDetails.status}
+                </p>
+              </section>
+
+              <section className="seller-order-details-products">
+                <h3>Sản phẩm ({orderDetails.totalItems} sản phẩm)</h3>
+                {(orderDetails.items || []).map((item) => (
+                  <article className="seller-order-details-product" key={item.id}>
+                    <img src={item.imgUrl} alt={item.productName} />
+                    <div>
+                      <h4>{item.productName.replace(/\s+HUGAN\b/gi, "")}</h4>
+                      <p>Size {item.size} · Màu {item.color} · Số lượng {item.quantity}</p>
+                      {item.printType ? (
+                        <>
+                          <p>
+                            Kiểu in: {item.printType === "PU" ? "PU" : "Decal"} · Giá áo {formatCurrency(item.garmentPrice ?? item.price)} / sản phẩm · Phí in {formatCurrency(item.printPrice || 0)} / sản phẩm
+                          </p>
+                          <div className="seller-order-details-note">
+                            <strong>Ghi chú in</strong>
+                            <p>{item.note || "Không có ghi chú."}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <p>Sản phẩm không yêu cầu in riêng.</p>
+                      )}
+                    </div>
+                    <strong className="seller-order-details-subtotal">
+                      {formatCurrency(item.subtotal)}
+                    </strong>
+                  </article>
+                ))}
+              </section>
+            </div>
+
+            <footer className="seller-order-details-footer">
+              <span>Tổng thanh toán</span>
+              <strong>{formatCurrency(orderDetails.totalPrice)}</strong>
+            </footer>
+          </section>
         </div>
       )}
     </section>

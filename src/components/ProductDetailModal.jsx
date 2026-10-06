@@ -95,7 +95,7 @@ export const ProductDetailModal = ({ product, onClose }) => {
             )}
             {/* Category Pill */}
             <span className="absolute top-6 left-6 badge-category">
-              {product.categoryName || "Thời Trang"}
+              {product.categoryNames?.join(", ") || product.categoryName || "Thời Trang"}
             </span>
           </div>
 

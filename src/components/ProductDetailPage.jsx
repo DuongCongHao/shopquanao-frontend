@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Image as ImageIcon, Zap } from "lucide-react";
+import { ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Image as ImageIcon, Zap, Printer, X } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { flyToCart } from "../utils/flyToCart";
 
@@ -48,10 +48,9 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
   const [selectedSize, setSelectedSize] = useState(variants[0]?.size || "");
   const [selectedColor, setSelectedColor] = useState(variants[0]?.color || "");
   const [activeImage, setActiveImage] = useState(0);
-
+  const [isPrintOrderOpen, setIsPrintOrderOpen] = useState(false);
+  const [printSelections, setPrintSelections] = useState({});
   const availableSizes = Array.from(new Set(variants.map(v => v.size).filter(Boolean)));
-
-  // Màu có sẵn theo size đang chọn
   const availableColors = Array.from(
     new Set(variants.filter(v => v.size === selectedSize).map(v => v.color).filter(Boolean))
   );
@@ -107,7 +106,6 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
 
   const handleSizeSelect = (size) => {
     setSelectedSize(size);
-    // Màu đầu tiên có sẵn theo size mới
     const colorsForSize = Array.from(
       new Set(variants.filter(v => v.size === size).map(v => v.color).filter(Boolean))
     );
@@ -121,6 +119,55 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
     setSelectedColor(color);
     const match = variants.find(v => v.size === selectedSize && v.color === color);
     if (match) setSelectedVariant(match);
+  };
+
+  const selectedPrintItems = variants
+    .map((variant) => ({
+      ...variant,
+      quantity: Number(printSelections[variant.id]?.quantity || 0),
+      printType: printSelections[variant.id]?.printType || "DECAL",
+      note: printSelections[variant.id]?.note || "",
+    }))
+    .filter((variant) => variant.quantity > 0);
+  const printOrderTotal = selectedPrintItems.reduce((total, item) => {
+    const garmentPrice = item.price ?? product.price;
+    const printPrice = item.printType === "PU" ? 100000 : 50000;
+    return total + (garmentPrice + printPrice) * item.quantity;
+  }, 0);
+
+  const updatePrintSelection = (variant, changes) => {
+    const current = printSelections[variant.id] || { quantity: 0, printType: "DECAL", note: "" };
+    const maxStock = Math.max(0, Number(variant.stock ?? 10));
+    const quantity = changes.quantity === undefined
+      ? current.quantity
+      : Math.min(maxStock, Math.max(0, Math.floor(Number(changes.quantity) || 0)));
+    setPrintSelections((selections) => ({
+      ...selections,
+      [variant.id]: { ...current, ...changes, quantity },
+    }));
+  };
+
+  const handlePrintCheckout = () => {
+    if (!selectedPrintItems.length) return;
+    onOpenCheckout(selectedPrintItems.map((variant) => {
+      const price = variant.price ?? product.price;
+      const printPrice = variant.printType === "PU" ? 100000 : 50000;
+      return {
+        id: `direct-print-${variant.id}`,
+        variantId: variant.id,
+        quantity: variant.quantity,
+        price,
+        printingPrice: printPrice,
+        printType: variant.printType,
+        note: variant.note.trim(),
+        subtotal: (price + printPrice) * variant.quantity,
+        productName: product.name,
+        size: variant.size,
+        color: variant.color,
+        imgUrl: variant.imgUrl || galleryImages[0] || product.imgUrl || "",
+        stock: variant.stock ?? 10,
+      };
+    }));
   };
 
   return (
@@ -183,9 +230,7 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
                         key={size}
                         onClick={() => handleSizeSelect(size)}
                         className={`product-size-button px-5 py-2.5 text-xs font-extrabold rounded-xl border transition-all ${
-                          selectedSize === size
-                            ? "is-selected"
-                              : ""
+                          selectedSize === size ? "is-selected" : ""
                         }`}
                       >
                         {size}
@@ -224,7 +269,6 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
                 </div>
               )}
 
-              {/* Thông tin variant đang chọn */}
               {selectedVariant && (
                 <div className="product-variant-info">
                   <span className="product-detail-price">{formatCurrency(selectedVariant.price ?? product.price)}</span>
@@ -233,7 +277,7 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
             </div>
 
             <div className="product-actions space-y-3 pt-4 border-t border-slate-200">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="product-action-grid">
                 <button
                   onClick={handleBuyNow}
                   disabled={currentStock <= 0 || !selectedVariant}
@@ -251,6 +295,14 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
                   <ShoppingBag size={18} />
                   <span>Thêm vào giỏ hàng</span>
                 </button>
+                <button
+                  onClick={() => setIsPrintOrderOpen(true)}
+                  disabled={!variants.length}
+                  className="product-action-button product-action-button--print"
+                >
+                  <Printer size={18} />
+                  <span>Đặt in riêng</span>
+                </button>
               </div>
 
             </div>
@@ -260,6 +312,115 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
         </div>
 
       </div>
+
+      {isPrintOrderOpen && (
+        <div
+          className="print-order-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="print-order-title"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setIsPrintOrderOpen(false);
+          }}
+        >
+          <section className="print-order-panel">
+            <header className="print-order-header">
+              <div>
+                <span className="print-order-eyebrow">Tùy chỉnh sản phẩm</span>
+                <h2 id="print-order-title">Đặt in riêng</h2>
+                <p>Chọn một hoặc nhiều size/màu, số lượng và kiểu in cho từng loại.</p>
+              </div>
+              <button
+                type="button"
+                className="print-order-close"
+                onClick={() => setIsPrintOrderOpen(false)}
+                aria-label="Đóng"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="print-order-list">
+              {variants.map((variant) => {
+                const selection = printSelections[variant.id] || { quantity: 0, printType: "DECAL", note: "" };
+                const quantity = Number(selection.quantity || 0);
+                const stock = Math.max(0, Number(variant.stock ?? 10));
+                const printPrice = selection.printType === "PU" ? 100000 : 50000;
+                return (
+                  <article className={`print-order-variant${quantity ? " is-selected" : ""}`} key={variant.id}>
+                    <div className="print-order-variant-heading">
+                      <span
+                        className="product-color-swatch"
+                        style={{ background: colorNameToHex(variant.color) }}
+                        aria-hidden="true"
+                      />
+                      <div className="print-order-variant-title">
+                        <strong>Size {variant.size || "—"} · {variant.color || "Chưa chọn màu"}</strong>
+                        <span>{formatCurrency(variant.price ?? product.price)} / áo · Còn {stock}</span>
+                      </div>
+                      <label className="print-order-quantity">
+                        <span>SL</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max={stock}
+                          step="1"
+                          value={quantity}
+                          onChange={(event) => updatePrintSelection(variant, { quantity: event.target.value })}
+                          aria-label={`Số lượng size ${variant.size}, màu ${variant.color}`}
+                        />
+                      </label>
+                    </div>
+                    {quantity > 0 && (
+                      <div className="print-order-options">
+                        <label className="print-order-field">
+                          <span>Loại in</span>
+                          <select
+                            value={selection.printType || "DECAL"}
+                            onChange={(event) => updatePrintSelection(variant, { printType: event.target.value })}
+                          >
+                            <option value="DECAL">In Decal — 50.000đ / sản phẩm</option>
+                            <option value="PU">In PU — 100.000đ / sản phẩm</option>
+                          </select>
+                        </label>
+                        <label className="print-order-field">
+                          <span>Ghi chú cho loại này</span>
+                          <textarea
+                            value={selection.note || ""}
+                            maxLength={2000}
+                            rows="2"
+                            placeholder="Nội dung in, vị trí in hoặc yêu cầu khác..."
+                            onChange={(event) => updatePrintSelection(variant, { note: event.target.value })}
+                          />
+                        </label>
+                        <p className="print-order-line-total">
+                          Thành tiền dòng này: {formatCurrency(((variant.price ?? product.price) + printPrice) * quantity)}
+                        </p>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+
+            <footer className="print-order-footer">
+              <div>
+                <span>Tổng thanh toán</span>
+                <strong>{formatCurrency(printOrderTotal)}</strong>
+                <small>Đã gồm giá áo và phí in cho từng sản phẩm.</small>
+              </div>
+              <button
+                type="button"
+                className="print-order-confirm"
+                onClick={handlePrintCheckout}
+                disabled={!selectedPrintItems.length}
+              >
+                Tiếp tục đặt in
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

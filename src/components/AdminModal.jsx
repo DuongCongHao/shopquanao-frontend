@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Trash2, Edit, Shield, Package, FolderPlus, Users, Save, Loader2 } from "lucide-react";
 import { productApi, categoryApi, userApi } from "../api/api";
+import { CategoryPicker } from "./CategoryPicker";
+import { resolveCategoryNames } from "../utils/categorySelection";
 
 // Spinner component
 const Spinner = ({ size = 16 }) => (
@@ -32,7 +34,7 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
     price: 350000,
     imgUrl: "",
     isPublished: true,
-    categoryId: "",
+    categoryText: "",
     variants: [
       { size: "M", color: "Đen", price: 350000, stock: 20, sku: "SKU-M-BLK", imgUrl: "" },
       { size: "L", color: "Trắng", price: 350000, stock: 15, sku: "SKU-L-WHT", imgUrl: "" }
@@ -109,7 +111,7 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
       price: 390000,
       imgUrl: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
       isPublished: true,
-      categoryId: categories[0]?.id || 1,
+      categoryText: categories[0]?.name || "",
       variants: [
         { size: "M", color: "Đen", price: 390000, stock: 20, sku: `SKU-${Date.now()}-M`, imgUrl: "" },
         { size: "L", color: "Trắng", price: 390000, stock: 15, sku: `SKU-${Date.now()}-L`, imgUrl: "" }
@@ -126,7 +128,9 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
       price: prod.price || 0,
       imgUrl: prod.imgUrl || "",
       isPublished: prod.isPublished ?? true,
-      categoryId: prod.categoryId || categories[0]?.id || 1,
+      categoryText: prod.categoryNames?.length
+        ? prod.categoryNames.join(", ")
+        : prod.categoryName || categories[0]?.name || "",
       variants: prod.variants?.length ? prod.variants : [
         { size: "M", color: "Đen", price: prod.price || 0, stock: 10, sku: `SKU-${prod.id}-M`, imgUrl: "" }
       ]
@@ -136,17 +140,29 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
-    if (!productForm.name || !productForm.price) {
-      alert("Vui lòng điền tên và giá sản phẩm!");
+    if (!productForm.name || !productForm.price || !productForm.categoryText.trim()) {
+      alert("Vui lòng điền tên, giá và ít nhất một danh mục!");
       return;
     }
 
     setSavingProduct(true);
     try {
+      const selectedCategories = await resolveCategoryNames(
+        productForm.categoryText,
+        categories,
+        categoryApi.create
+      );
+      const payload = {
+        ...productForm,
+        categoryIds: selectedCategories.map((category) => category.id),
+        categoryId: selectedCategories[0].id,
+        categoryNames: selectedCategories.map((category) => category.name),
+      };
+      delete payload.categoryText;
       if (editingProductId) {
-        await productApi.update(editingProductId, productForm);
+        await productApi.update(editingProductId, payload);
       } else {
-        await productApi.create(productForm);
+        await productApi.create(payload);
       }
       setShowProductForm(false);
       loadAllData();
@@ -310,7 +326,7 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
                               </div>
                             </td>
                             <td className="p-3">
-                              <span className="badge-category text-[10px]">{p.categoryName || "Thời Trang"}</span>
+                              <span className="badge-category text-[10px]">{p.categoryNames?.join(", ") || p.categoryName || "Thời Trang"}</span>
                             </td>
                             <td className="p-3 font-bold text-amber-400">{formatCurrency(p.price)}</td>
                             <td className="p-3">
@@ -371,17 +387,13 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">Danh Mục *</label>
-                      <select
-                        value={productForm.categoryId}
-                        onChange={(e) => setProductForm({ ...productForm, categoryId: Number(e.target.value) })}
-                        className="w-full bg-slate-950 border border-slate-700 text-xs text-white rounded-xl py-2.5 px-3 focus:border-amber-400"
-                      >
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
+                    <div className="md:col-span-2">
+                      <CategoryPicker
+                        categories={categories}
+                        value={productForm.categoryText}
+                        variant="admin"
+                        onChange={(categoryText) => setProductForm((current) => ({ ...current, categoryText }))}
+                      />
                     </div>
 
                     <div>
