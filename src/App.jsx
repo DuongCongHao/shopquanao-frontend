@@ -439,7 +439,6 @@ function InnerApp() {
                   size: variantMeta.size,
                   color: variantMeta.color,
                   imgUrl: variantMeta.imgUrl,
-                  stock: variantOrItems.stock ?? 10,
                 });
               }
               setCheckoutVariantId(null);

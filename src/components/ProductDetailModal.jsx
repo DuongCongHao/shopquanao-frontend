@@ -60,7 +60,6 @@ export const ProductDetailModal = ({ product, onClose }) => {
   };
 
   const currentPrice = selectedVariant?.price || product.price;
-  const currentStock = selectedVariant?.stock ?? 10;
   const currentImg = selectedVariant?.imgUrl || product.imgUrl || product.images?.[0];
 
   return (
@@ -114,11 +113,6 @@ export const ProductDetailModal = ({ product, onClose }) => {
                 <span className="text-3xl font-extrabold text-amber-400">
                   {formatCurrency(currentPrice)}
                 </span>
-                {currentStock <= 0 && (
-                  <span className="badge-stock out-of-stock">
-                    Hết hàng
-                  </span>
-                )}
               </div>
 
               {/* Description */}
@@ -195,7 +189,7 @@ export const ProductDetailModal = ({ product, onClose }) => {
                       {quantity}
                     </span>
                     <button
-                      onClick={() => setQuantity(Math.min(currentStock, quantity + 1))}
+                      onClick={() => setQuantity(quantity + 1)}
                       className="px-3.5 py-2 text-slate-300 hover:text-white font-bold text-base hover:bg-slate-800"
                     >
                       +
@@ -212,11 +206,10 @@ export const ProductDetailModal = ({ product, onClose }) => {
             <div className="space-y-3 pt-2">
               <button
                 onClick={handleAddToCart}
-                disabled={currentStock <= 0}
                 className="w-full btn-primary py-3.5 text-base font-extrabold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShoppingBag size={20} />
-                <span>{currentStock > 0 ? "Thêm Vào Giỏ Hàng" : "Hết Hàng Rỗi"}</span>
+                <span>Thêm Vào Giỏ Hàng</span>
               </button>
 
               {/* Feedback Toast Banner */}

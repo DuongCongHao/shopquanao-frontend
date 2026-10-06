@@ -1109,7 +1109,6 @@ export const SellerDashboard = ({
               size,
               color,
               price,
-              stock: previous?.stock ?? 100,
               sku:
                 previous?.sku ||
                 `SKU-${Date.now()}-${sizeIndex}-${colorIndex}`,

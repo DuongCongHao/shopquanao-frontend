@@ -2604,7 +2604,7 @@
   line-height: 1;
 }
 
-/* Thông tin variant (tồn kho + giá) */
+/* Thông tin variant */
 .product-variant-info {
   display: flex;
   align-items: center;

@@ -36,8 +36,8 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
     isPublished: true,
     categoryText: "",
     variants: [
-      { size: "M", color: "Đen", price: 350000, stock: 20, sku: "SKU-M-BLK", imgUrl: "" },
-      { size: "L", color: "Trắng", price: 350000, stock: 15, sku: "SKU-L-WHT", imgUrl: "" }
+      { size: "M", color: "Đen", price: 350000, sku: "SKU-M-BLK", imgUrl: "" },
+      { size: "L", color: "Trắng", price: 350000, sku: "SKU-L-WHT", imgUrl: "" }
     ]
   });
 
@@ -113,8 +113,8 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
       isPublished: true,
       categoryText: categories[0]?.name || "",
       variants: [
-        { size: "M", color: "Đen", price: 390000, stock: 20, sku: `SKU-${Date.now()}-M`, imgUrl: "" },
-        { size: "L", color: "Trắng", price: 390000, stock: 15, sku: `SKU-${Date.now()}-L`, imgUrl: "" }
+        { size: "M", color: "Đen", price: 390000, sku: `SKU-${Date.now()}-M`, imgUrl: "" },
+        { size: "L", color: "Trắng", price: 390000, sku: `SKU-${Date.now()}-L`, imgUrl: "" }
       ]
     });
     setShowProductForm(true);
@@ -132,7 +132,7 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
         ? prod.categoryNames.join(", ")
         : prod.categoryName || categories[0]?.name || "",
       variants: prod.variants?.length ? prod.variants : [
-        { size: "M", color: "Đen", price: prod.price || 0, stock: 10, sku: `SKU-${prod.id}-M`, imgUrl: "" }
+        { size: "M", color: "Đen", price: prod.price || 0, sku: `SKU-${prod.id}-M`, imgUrl: "" }
       ]
     });
     setShowProductForm(true);
@@ -194,7 +194,7 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
       ...productForm,
       variants: [
         ...productForm.variants,
-        { size: "XL", color: "Xám", price: productForm.price, stock: 10, sku: `SKU-${Date.now()}`, imgUrl: "" }
+        { size: "XL", color: "Xám", price: productForm.price, sku: `SKU-${Date.now()}`, imgUrl: "" }
       ]
     });
   };
@@ -475,16 +475,7 @@ export const AdminModal = ({ onClose, onRefreshData }) => {
                             className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-white"
                           />
                         </div>
-                        <div className="col-span-2">
-                          <input
-                            type="number"
-                            placeholder="Tồn kho"
-                            value={v.stock}
-                            onChange={(e) => handleVariantChange(idx, "stock", Number(e.target.value))}
-                            className="w-full bg-slate-900 border border-slate-800 p-2 rounded text-white"
-                          />
-                        </div>
-                        <div className="col-span-2">
+                        <div className="col-span-4">
                           <input
                             type="text"
                             placeholder="Mã SKU"

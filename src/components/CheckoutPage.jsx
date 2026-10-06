@@ -258,9 +258,6 @@ export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem =
   const renderOrderItems = (items, editable = false) => (
     <div className="checkout-order-items">
       {items.map((item) => {
-        const directStock = directItems.find(
-          (directItem) => directItem.variantId === item.variantId
-        )?.stock;
         return (
         <article key={item.id || item.variantId} className="checkout-order-item">
           <CheckoutItemImage src={item.imgUrl} alt={item.productName} />
@@ -304,11 +301,6 @@ export const CheckoutPage = ({ onGoBack, checkoutVariantId, directCheckoutItem =
                     }
                     else updateQuantity(item.id, quantity);
                   }}
-                  disabled={
-                    directItems.length > 0 &&
-                    Number.isFinite(Number(directStock)) &&
-                    item.quantity >= Number(directStock)
-                  }
                   aria-label="Tăng số lượng"
                 >
                   <Plus size={12} />

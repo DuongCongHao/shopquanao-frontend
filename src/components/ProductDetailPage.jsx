@@ -90,7 +90,6 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
     onOpenCheckout(selectedVariant, variantMeta);
   };
 
-  const currentStock = selectedVariant?.stock ?? 10;
   const scrollToImage = (index) => {
     const track = galleryRef.current;
     if (!track) return;
@@ -137,10 +136,9 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
 
   const updatePrintSelection = (variant, changes) => {
     const current = printSelections[variant.id] || { quantity: 0, printType: "DECAL", note: "" };
-    const maxStock = Math.max(0, Number(variant.stock ?? 10));
     const quantity = changes.quantity === undefined
       ? current.quantity
-      : Math.min(maxStock, Math.max(0, Math.floor(Number(changes.quantity) || 0)));
+      : Math.max(0, Math.floor(Number(changes.quantity) || 0));
     setPrintSelections((selections) => ({
       ...selections,
       [variant.id]: { ...current, ...changes, quantity },
@@ -165,7 +163,6 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
         size: variant.size,
         color: variant.color,
         imgUrl: variant.imgUrl || galleryImages[0] || product.imgUrl || "",
-        stock: variant.stock ?? 10,
       };
     }));
   };
@@ -280,7 +277,7 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
               <div className="product-action-grid">
                 <button
                   onClick={handleBuyNow}
-                  disabled={currentStock <= 0 || !selectedVariant}
+                  disabled={!selectedVariant}
                   className="product-action-button product-action-button--buy"
                 >
                   <Zap size={18} />
@@ -289,7 +286,7 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
 
                 <button
                   onClick={handleAddToCart}
-                  disabled={currentStock <= 0 || !selectedVariant}
+                  disabled={!selectedVariant}
                   className="product-action-button product-action-button--cart"
                 >
                   <ShoppingBag size={18} />
@@ -344,7 +341,6 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
               {variants.map((variant) => {
                 const selection = printSelections[variant.id] || { quantity: 0, printType: "DECAL", note: "" };
                 const quantity = Number(selection.quantity || 0);
-                const stock = Math.max(0, Number(variant.stock ?? 10));
                 const printPrice = selection.printType === "PU" ? 100000 : 50000;
                 return (
                   <article className={`print-order-variant${quantity ? " is-selected" : ""}`} key={variant.id}>
@@ -356,14 +352,13 @@ export const ProductDetailPage = ({ product, onGoBack, onOpenCheckout }) => {
                       />
                       <div className="print-order-variant-title">
                         <strong>Size {variant.size || "—"} · {variant.color || "Chưa chọn màu"}</strong>
-                        <span>{formatCurrency(variant.price ?? product.price)} / áo · Còn {stock}</span>
+                        <span>{formatCurrency(variant.price ?? product.price)} / áo</span>
                       </div>
                       <label className="print-order-quantity">
                         <span>SL</span>
                         <input
                           type="number"
                           min="0"
-                          max={stock}
                           step="1"
                           value={quantity}
                           onChange={(event) => updatePrintSelection(variant, { quantity: event.target.value })}
